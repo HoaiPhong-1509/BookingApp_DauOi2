@@ -2,61 +2,83 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema(
-    {
-        hoTen: {
-            type: String,
-            required: true,
-            trim: true
-        },
-
-        email: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true
-        },
-
-        matKhau: {
-            type: String,
-            required: true,
-            select: false
-        },
-
-        vaiTro: {
-            type: String,
-            enum: ["admin", "nhanvien", "quanly"],
-            default: "nhanvien"
-        },
-
-        trangThai: {
-            type: String,
-            enum: ["hoatdong", "choduyet","bikhoa"],
-            default: "hoatdong"
-        },
-
-        deletedAt: {
-            type: Date,
-            default: null
-        }
+  {
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    {
-        timestamps: true
-    }
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    passwordHash: {
+      type: String,
+      required: true,
+      select: false,
+    },
+
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    role: {
+      type: String,
+      enum: ["admin", "manager", "employee"],
+      default: "employee",
+    },
+
+    status: {
+      type: String,
+      enum: ["pending", "active", "blocked", "deleted"],
+      default: "pending",
+    },
+
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      default: null,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-// Mã hóa mật khẩu trước khi lưu vào database
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("matKhau")) {
-        return next();
-    }
+userSchema.pre("save", async function () {
+  if (!this.isModified("passwordHash")) {
+    return;
+  }
 
-    const salt = await bcrypt.genSalt(10);
-    this.matkhau = await bcrypt.hash(this.matKhau, salt);
-
-    next();
+  const salt = await bcrypt.genSalt(10);
+  this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
 });
 
-const User = mongoose.model("User", userSchema);
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.passwordHash);
+};
 
+const User = mongoose.model("User", userSchema);
 export default User;

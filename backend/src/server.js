@@ -1,29 +1,20 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { connectDB } from './config/db.js';
-import userRoutes from './routes/userRoutes.js';
+import dotenv from "dotenv";
+import app from "./app.js";
+import connectDB from "./config/db.js";
+import { startAutoNoShowJob } from "./jobs/autoNoShowBookings.js";
 
 dotenv.config();
 
-const app = express();
-
 connectDB();
 
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT || 5000;
+const stopAutoNoShow = startAutoNoShowJob(5 * 60 * 1000);
 
-app.get('/', (req, res) => {
-    res.json({
-        message:"Backend is running"
-    })
+const server = app.listen(PORT, () => {
+  console.log(`Server đang chạy ở port ${PORT}`);
 });
 
-app.use('/api/users', userRoutes);
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+process.on('SIGINT', () => {
+  stopAutoNoShow();
+  server.close(() => process.exit(0));
 });

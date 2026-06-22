@@ -1,0 +1,46 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import branchRoutes from "./routes/branchRoutes.js";
+import resourceRoutes from "./routes/resourceRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
+
+const app = express();
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again later.",
+    errors: [],
+  },
+});
+
+app.use(helmet());
+app.use(limiter);
+app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
+app.use("/api/auth", authRoutes);
+app.use("/api/admin/users", userRoutes);
+app.use("/api/admin/branches", branchRoutes);
+app.use("/api/resources", resourceRoutes);
+app.use("/api/bookings", bookingRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;
