@@ -108,6 +108,7 @@ export const createBooking = async (req, res) => {
         branchId,
         isDeleted: false,
         status: { $ne: 'inactive' },
+        type: { $in: ['table', 'room'] },
         reservationStatus: 'available',
       }).session(session);
 

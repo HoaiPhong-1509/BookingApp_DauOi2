@@ -24,8 +24,8 @@ const resourceSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: ['table', 'room'],
-        message: 'type must be either table or room',
+        values: ['table', 'room', 'obstacle'],
+        message: 'type must be table, room, or obstacle',
       },
       required: [true, 'type is required'],
     },
@@ -33,7 +33,7 @@ const resourceSchema = new mongoose.Schema(
     capacity: {
       type: Number,
       required: [true, 'capacity is required'],
-      min: [1, 'capacity must be greater than 0'],
+      min: [0, 'capacity cannot be negative'],
     },
 
     description: {
@@ -76,6 +76,10 @@ const resourceSchema = new mongoose.Schema(
 
     layout: {
       floor: String,
+      variant: {
+        type: String,
+        enum: ['square_2', 'rectangle_4', 'long_8', 'meeting_room', 'wall'],
+      },
       x: Number,
       y: Number,
       width: Number,
@@ -127,7 +131,6 @@ const resourceSchema = new mongoose.Schema(
 
 resourceSchema.index({ branchId: 1, code: 1 }, { unique: true, sparse: true });
 resourceSchema.index({ branchId: 1, isDeleted: 1, status: 1, reservationStatus: 1 });
-resourceSchema.index({ currentBookingId: 1 });
 
 const Resource = mongoose.model('Resource', resourceSchema);
 export default Resource;

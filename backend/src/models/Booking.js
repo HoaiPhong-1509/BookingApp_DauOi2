@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+import {
+  BOOKING_HISTORY_STATUSES,
+  getBookingHistoryExpiry,
+} from '../utils/bookingRetention.js';
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -112,6 +116,13 @@ const bookingSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+
+    // MongoDB TTL hard-deletes history after 30 days. Reserved bookings keep
+    // this field null, so an active booking can never expire accidentally.
+    historyExpiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -121,6 +132,20 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.index({ resourceId: 1, status: 1 });
 bookingSchema.index({ branchId: 1, status: 1, bookingTime: 1 });
 bookingSchema.index({ holdUntil: 1, status: 1 });
+bookingSchema.index({ historyExpiresAt: 1 }, { expireAfterSeconds: 0 });
+
+bookingSchema.pre('save', function setHistoryExpiry() {
+  if (!this.isModified('status')) return;
+
+  if (BOOKING_HISTORY_STATUSES.includes(this.status)) {
+    if (!this.historyExpiresAt) {
+      this.historyExpiresAt = getBookingHistoryExpiry();
+    }
+    return;
+  }
+
+  this.historyExpiresAt = null;
+});
 
 const Booking = mongoose.model('Booking', bookingSchema);
 export default Booking;

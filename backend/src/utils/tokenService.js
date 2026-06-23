@@ -41,6 +41,10 @@ export const hashToken = (token) => {
 };
 
 export const createRefreshToken = async ({ userId, ipAddress, userAgent }) => {
+  if (!userId) {
+    throw new Error("Cannot create a refresh token without a userId.");
+  }
+
   const token = generateRefreshTokenString();
   const tokenHash = hashToken(token);
   const familyId = crypto.randomUUID();
@@ -65,12 +69,23 @@ export const createRefreshToken = async ({ userId, ipAddress, userAgent }) => {
   };
 };
 
-export const rotateRefreshToken = async ({ currentToken, userId, ipAddress, userAgent }) => {
+export const rotateRefreshToken = async ({ currentToken, ipAddress, userAgent }) => {
   const hashed = hashToken(currentToken);
   const tokenDoc = await RefreshToken.findOne({ tokenHash: hashed });
 
   if (!tokenDoc) {
     return { reuseDetected: false, tokenDoc: null };
+  }
+
+  // Defensive handling for legacy/corrupt token records. Do not attempt to
+  // rotate a token without an owner and do not let a Mongoose ValidationError
+  // crash the refresh request.
+  if (!tokenDoc.userId) {
+    await RefreshToken.updateOne(
+      { _id: tokenDoc._id },
+      { revokedAt: new Date(), revokedByIp: ipAddress }
+    );
+    return { reuseDetected: false, tokenDoc: null, newToken: null };
   }
 
   if (tokenDoc.revokedAt) {
@@ -101,7 +116,10 @@ export const rotateRefreshToken = async ({ currentToken, userId, ipAddress, user
   const expiresAt = new Date(now.getTime() + refreshIdleDays * 24 * 60 * 60 * 1000);
 
   const newRefreshTokenDoc = await RefreshToken.create({
-    userId,
+    // The refresh token is the source of truth for its owner. Requiring the
+    // caller to pass userId again caused rotated tokens to be created without
+    // an owner when the access token had already expired.
+    userId: tokenDoc.userId,
     tokenHash: newTokenHash,
     familyId: tokenDoc.familyId,
     expiresAt,

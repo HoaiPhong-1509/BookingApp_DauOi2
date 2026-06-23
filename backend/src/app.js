@@ -11,14 +11,18 @@ import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
 
 const app = express();
 
+const apiRateLimitMax = Math.max(100, Number(process.env.API_RATE_LIMIT_MAX || 2000));
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: apiRateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS",
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again later.",
+    message: "Hệ thống đang nhận quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.",
+    code: "API_RATE_LIMITED",
     errors: [],
   },
 });

@@ -43,14 +43,20 @@ const validateCreateResource = [
   check('type')
     .notEmpty()
     .withMessage('type is required')
-    .isIn(['table', 'room'])
-    .withMessage('type must be either table or room'),
+    .isIn(['table', 'room', 'obstacle'])
+    .withMessage('type must be table, room, or obstacle'),
 
   check('capacity')
     .notEmpty()
     .withMessage('capacity is required')
-    .isInt({ min: 1 })
-    .withMessage('capacity must be a number greater than 0'),
+    .isInt({ min: 0 })
+    .withMessage('capacity must be zero or greater')
+    .custom((value, { req }) => {
+      if (req.body.type !== 'obstacle' && Number(value) < 1) {
+        throw new Error('bookable resources must have a capacity greater than 0');
+      }
+      return true;
+    }),
 
   check('description')
     .optional()
@@ -98,13 +104,13 @@ const validateUpdateResource = [
 
   check('type')
     .optional()
-    .isIn(['table', 'room'])
-    .withMessage('type must be either table or room'),
+    .isIn(['table', 'room', 'obstacle'])
+    .withMessage('type must be table, room, or obstacle'),
 
   check('capacity')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('capacity must be a number greater than 0'),
+    .isInt({ min: 0 })
+    .withMessage('capacity must be zero or greater'),
 
   check('description')
     .optional()

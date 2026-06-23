@@ -61,8 +61,9 @@ const clearRefreshTokenCookie = (res) => {
 export const registerUser = async (req, res, next) => {
   try {
     const { fullName, email, password, phone } = req.body;
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -73,7 +74,7 @@ export const registerUser = async (req, res, next) => {
 
     const user = new User({
       fullName,
-      email,
+      email: normalizedEmail,
       passwordHash: password,
       phone,
       role: "employee",
@@ -95,7 +96,8 @@ export const registerUser = async (req, res, next) => {
 export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email }).select("+passwordHash");
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select("+passwordHash");
 
     if (!user) {
       return res.status(401).json({
@@ -114,10 +116,29 @@ export const loginUser = async (req, res, next) => {
       });
     }
 
-    if (user.isDeleted || user.status !== "active") {
+    if (user.isDeleted || user.status === "deleted") {
       return res.status(403).json({
         success: false,
-        message: "Account is not active.",
+        message: "Tài khoản này không còn hoạt động.",
+        code: "ACCOUNT_DELETED",
+        errors: [],
+      });
+    }
+
+    if (user.status === "pending") {
+      return res.status(403).json({
+        success: false,
+        message: "Tài khoản đang chờ quản trị viên phê duyệt.",
+        code: "ACCOUNT_PENDING",
+        errors: [],
+      });
+    }
+
+    if (user.status === "blocked") {
+      return res.status(403).json({
+        success: false,
+        message: "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
+        code: "ACCOUNT_BLOCKED",
         errors: [],
       });
     }

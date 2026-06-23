@@ -2,8 +2,8 @@ import { body, param, query } from "express-validator";
 
 // Validate list users query
 export const listUsersValidation = [
-  query("status").optional().isIn(["pending", "active", "blocked", "deleted"]).withMessage("Invalid status."),
-  query("role").optional().isIn(["admin", "manager", "employee"]).withMessage("Invalid role."),
+  query("status").optional({ values: "falsy" }).isIn(["pending", "active", "blocked", "deleted"]).withMessage("Invalid status."),
+  query("role").optional({ values: "falsy" }).isIn(["admin", "manager", "employee"]).withMessage("Invalid role."),
   query("page").optional().isInt({ min: 1 }).withMessage("Page must be a positive integer."),
   query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("Limit must be between 1 and 100."),
 ];

@@ -12,11 +12,10 @@ export const getResources = async (req, res) => {
     // Build filter object
     const filter = { isDeleted: false };
 
-    if (branchId) {
-      filter.branchId = branchId;
-    } else if (req.user.role === 'manager' && req.user.branchId) {
-      // Manager can only see resources in their branch
+    if (req.user.role !== 'admin' && req.user.branchId) {
       filter.branchId = req.user.branchId;
+    } else if (branchId) {
+      filter.branchId = branchId;
     }
 
     if (type) {
@@ -83,8 +82,7 @@ export const getResourceById = async (req, res) => {
       });
     }
 
-    // Manager can only view resources in their branch
-    if (req.user.role === 'manager' && resource.branchId._id.toString() !== req.user.branchId.toString()) {
+    if (req.user.role !== 'admin' && resource.branchId._id.toString() !== req.user.branchId?.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this resource',
@@ -109,6 +107,13 @@ export const createResource = async (req, res) => {
   try {
     const { branchId, name, code, type, capacity, description, status, locationLabel, layout } = req.body;
 
+    if (req.user.role !== 'admin' && req.user.branchId?.toString() !== branchId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only create resources for your own branch',
+      });
+    }
+
     // Create new resource
     const resource = new Resource({
       branchId,
@@ -120,6 +125,7 @@ export const createResource = async (req, res) => {
       status,
       locationLabel,
       layout,
+      reservationStatus: type === 'obstacle' ? 'inactive' : 'available',
       createdBy: req.user._id,
     });
 
@@ -175,8 +181,17 @@ export const updateResource = async (req, res) => {
     // Update fields
     if (name !== undefined) resource.name = name;
     if (code !== undefined) resource.code = code.toUpperCase();
-    if (type !== undefined) resource.type = type;
-    if (capacity !== undefined) resource.capacity = capacity;
+    if (type !== undefined) {
+      resource.type = type;
+      if (type === 'obstacle') {
+        resource.capacity = 0;
+        resource.reservationStatus = 'inactive';
+        resource.currentBookingId = null;
+      } else if (resource.type === 'obstacle' || resource.reservationStatus === 'inactive') {
+        resource.reservationStatus = 'available';
+      }
+    }
+    if (capacity !== undefined && resource.type !== 'obstacle') resource.capacity = capacity;
     if (description !== undefined) resource.description = description;
     if (status !== undefined) resource.status = status;
     if (locationLabel !== undefined) resource.locationLabel = locationLabel;
@@ -269,10 +284,16 @@ export const getResourcesByBranch = async (req, res) => {
     const { branchId } = req.params;
     const { type } = req.query;
 
+    if (req.user.role !== 'admin' && req.user.branchId?.toString() !== branchId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view the resource map for your own branch',
+      });
+    }
+
     const filter = {
       branchId,
       isDeleted: false,
-      status: 'active',
     };
 
     if (type) {
