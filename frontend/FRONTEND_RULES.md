@@ -1169,6 +1169,7 @@ Dễ thao tác.
 Nhân viên nhìn vào biết bàn nào đang có booking.
 Không cần quá đẹp ở MVP.
 Không làm quá nhiều màn hình trước khi dashboard chạy tốt.
+code dễ quản lý và thay đổi trong tương lai
 ```
 
 Dashboard phải trả lời được ngay:

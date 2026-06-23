@@ -1,0 +1,10 @@
+{
+  "name": "DauOi Booking",
+  "short_name": "DauOi",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f5f3ec",
+  "theme_color": "#14352d",
+  "lang": "vi",
+  "icons": []
+}
