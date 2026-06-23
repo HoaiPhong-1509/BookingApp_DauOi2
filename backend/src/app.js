@@ -36,6 +36,8 @@ const allowedOrigins = [
   process.env.CLIENT_URL,        // URL Vercel production
 ].filter(Boolean)                // loại bỏ giá trị undefined
 
+console.log("Allowed origins:", allowedOrigins)
+
 app.use(
   cors({
     origin: (origin, callback) => {
