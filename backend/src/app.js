@@ -30,13 +30,28 @@ const limiter = rateLimit({
 app.use(helmet());
 app.use(limiter);
 app.use(express.json());
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.CLIENT_URL,        // URL Vercel production
+].filter(Boolean)                // loại bỏ giá trị undefined
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Cho phép request không có origin (Postman, mobile app,...)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`))
+      }
+    },
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     credentials: true,
   })
-);
+)
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin/users", userRoutes);
