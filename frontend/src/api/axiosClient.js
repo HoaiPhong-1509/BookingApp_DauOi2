@@ -1,10 +1,11 @@
 import axios from "axios"
 
-// Keep API calls on the same origin by default. In development Vite proxies
-// /api to the backend; in production the web server should do the same.
-// This also works from a real phone, where "localhost" would point to the
-// phone itself instead of the computer running the backend.
-const baseURL = import.meta.env.VITE_API_URL || "/api"
+// Keep production auth requests on the frontend origin so the refresh-token
+// cookie remains first-party. Vercel forwards /api to the backend, while Vite
+// uses its local proxy during development.
+const baseURL = import.meta.env.PROD
+  ? "/api"
+  : (import.meta.env.VITE_API_URL || "/api")
 
 const api = axios.create({
   baseURL,

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import * as authApi from '../api/authApi'
 import { clearAccessToken, registerLogoutHandler, setAccessToken } from '../api/axiosClient'
 
+let refreshSessionPromise = null
+
 export const useAuthStore = create((set, get) => ({
   user: null,
   accessToken: null,
@@ -35,18 +37,26 @@ export const useAuthStore = create((set, get) => ({
     set({ user, isAuthenticated: true })
     return user
   },
-  refreshSession: async () => {
-    if (get().initialized) return
+  refreshSession: () => {
+    if (get().initialized) return Promise.resolve()
+    if (refreshSessionPromise) return refreshSessionPromise
+
     set({ isLoading: true })
-    try {
-      const { accessToken } = await authApi.refresh()
-      if (!accessToken) throw new Error('No access token')
-      const user = await authApi.me()
-      set({ user, accessToken, isAuthenticated: true, isLoading: false, initialized: true })
-    } catch {
-      get().clearAuth()
-      set({ initialized: true })
-    }
+    refreshSessionPromise = (async () => {
+      try {
+        const { accessToken } = await authApi.refresh()
+        if (!accessToken) throw new Error('No access token')
+        const user = await authApi.me()
+        set({ user, accessToken, isAuthenticated: true, isLoading: false, initialized: true })
+      } catch {
+        get().clearAuth()
+        set({ initialized: true })
+      } finally {
+        refreshSessionPromise = null
+      }
+    })()
+
+    return refreshSessionPromise
   },
   logout: async () => {
     try { await authApi.logout() } catch { /* local session still clears */ }
