@@ -13,6 +13,7 @@ const api = axios.create({
 })
 
 let accessToken = null
+let offlineUserId = null
 let refreshInProgress = false
 let refreshSubscribers = []
 let logoutHandler = null
@@ -23,6 +24,20 @@ export const setAccessToken = (token) => {
 
 export const clearAccessToken = () => {
   accessToken = null
+}
+
+export const setOfflineUserId = (userId) => {
+  offlineUserId = userId ? String(userId) : null
+}
+
+export const clearOfflineCache = async () => {
+  setOfflineUserId(null)
+
+  if (typeof caches !== "undefined") {
+    await caches.delete("dauoi-api-v1")
+  }
+
+  navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_API_CACHE" })
 }
 
 export const registerLogoutHandler = (callback) => {
@@ -63,6 +78,10 @@ api.interceptors.request.use(
     if (accessToken) {
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${accessToken}`
+    }
+    if (offlineUserId && String(config.method || "get").toLowerCase() === "get") {
+      config.headers = config.headers || {}
+      config.headers["X-Offline-User-Id"] = offlineUserId
     }
     return config
   },

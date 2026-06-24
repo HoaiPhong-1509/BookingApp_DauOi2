@@ -6,7 +6,12 @@ import { useAuthStore } from './stores/authStore'
 
 function App() {
   const refreshSession = useAuthStore((state) => state.refreshSession)
-  useEffect(() => { refreshSession() }, [refreshSession])
+  useEffect(() => {
+    refreshSession()
+    const reconnect = () => refreshSession({ force: true })
+    window.addEventListener('online', reconnect)
+    return () => window.removeEventListener('online', reconnect)
+  }, [refreshSession])
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AppRoutes />
